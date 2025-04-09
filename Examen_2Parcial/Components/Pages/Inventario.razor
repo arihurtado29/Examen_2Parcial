@@ -153,12 +153,20 @@
     {
         if (_productoEditando is not null)
         {
+            if (_listaProductos.Any(p => p.Inventario == _producto.Inventario && p != _productoEditando))
+            {
+                inventarioDuplicado = true;
+                return;
+            }
+
+            _productoEditando.Inventario = _producto.Inventario;
             _productoEditando.Nombre = _producto.Nombre;
             _productoEditando.Departamento = _producto.Departamento;
 
             _producto = new Productos();
             _productoEditando = null;
             editando = false;
+            inventarioDuplicado = false;
         }
     }
 
