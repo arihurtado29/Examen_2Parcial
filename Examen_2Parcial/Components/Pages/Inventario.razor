@@ -1,0 +1,180 @@
+﻿@page "/Inventario"
+@rendermode InteractiveServer
+
+<h1>Productos</h1>
+
+<EditForm Model="@_producto" FormName="frmProductos" OnValidSubmit="Guardar">
+    <DataAnnotationsValidator />
+    @if (inventarioDuplicado)
+    {
+        <div class="alert alert-danger">
+            El número de inventario ya está registrado. Ingrese un número diferente.
+        </div>
+    }
+
+    <div class="mb-3">
+        <label for="txtInventario" class="form-label">Inventario</label>
+        <InputNumber @bind-Value="_producto.Inventario" class="form-control" id="txtInventario" />
+        <ValidationMessage For="()=>_producto.Inventario" />
+    </div>
+
+    <div class="mb-3">
+        <label for="txtNombre" class="form-label">Nombre</label>
+        <InputText @bind-Value="_producto.Nombre" class="form-control" id="txtNombre" />
+        <ValidationMessage For="()=>_producto.Nombre" />
+    </div>
+
+    <div class="mb-3">
+        <label for="txtDepartamento" class="form-label">Departamento</label>
+        <InputRadioGroup @bind-Value="_producto.Departamento" Name="rdgDepartamento" class="form-control" id="txtDepartamento">
+            <InputRadio Value="@("Frutas")" /> Frutas
+            <InputRadio Value="@("Verduras")" class="ms-3" /> Verduras
+            <InputRadio Value="@("Lácteos")" class="ms-3" /> Lácteos
+        </InputRadioGroup>
+        <ValidationMessage For="()=>_producto.Departamento" />
+    </div>
+    
+    @if (!editando)
+    {
+        <button type="submit" class="btn btn-success">Guardar</button>
+    }
+    else
+    {
+        <button class="btn btn-primary me-2" @onclick="Actualizar">Actualizar</button>
+        <button class="btn btn-danger" @onclick="CancelarEdicion">Cancelar</button>
+    }
+    <br />
+    <button class="btn btn-secondary" @onclick="MostrarExistencias">Existencias</button>
+
+    <hr />
+    <h4>Lista de Productos</h4>
+</EditForm>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <td><strong>Inventario</strong></td>
+            <td><strong>Nombre</strong></td>
+            <td><strong>Departamento</strong></td>
+            <td><strong>Acciones</strong></td>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (Productos productos in _listaProductos)
+        {
+            <tr>
+                <td>@productos.Inventario</td>
+                <td>@productos.Nombre</td>
+                <td>@productos.Departamento</td>
+                <td>
+                    <button class="btn btn-outline-danger" @onclick="()=>Eliminar(productos)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="black" class="bi bi-trash-fill" viewBox="0 0 16 16">
+                            <path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5M8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5m3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0" />
+                        </svg>
+                    </button>
+
+                    <button class="btn btn-outline-dark" @onclick="()=>Editar(productos)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16">
+                            <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z" />
+                        </svg>
+                    </button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (resumenDepartamentos.Count > 0)
+{
+    <h4>Existencias por Departamento</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Departamento</th>
+                <th>Productos</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in resumenDepartamentos)
+            {
+                <tr>
+                    <td>@item.Key</td>
+                    <td>@item.Value</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@code {
+    private Productos _producto = new();
+    private List<Productos> _listaProductos = new();
+
+    private bool inventarioDuplicado = false;
+
+    private bool editando = false;
+    private Productos _productoEditando = null;
+
+    private Dictionary<string, int> resumenDepartamentos = new();
+
+    private void Guardar()
+    {
+        if (_listaProductos.Any(p => p.Inventario == _producto.Inventario))
+        {
+            inventarioDuplicado = true;
+            return;
+        }
+
+        inventarioDuplicado = false;
+        _listaProductos.Add(_producto);
+        _producto = new Productos();
+    }
+
+    private void Eliminar(Productos inventario)
+    {
+        _listaProductos.Remove(inventario);
+    }
+
+    private void Editar(Productos producto)
+    {
+        _producto = new Productos
+            {
+                Inventario = producto.Inventario,
+                Nombre = producto.Nombre,
+                Departamento = producto.Departamento
+            };
+
+        _productoEditando = producto;
+        editando = true;
+    }
+
+    private void Actualizar()
+    {
+        if (_productoEditando is not null)
+        {
+            _productoEditando.Nombre = _producto.Nombre;
+            _productoEditando.Departamento = _producto.Departamento;
+
+            _producto = new Productos();
+            _productoEditando = null;
+            editando = false;
+        }
+    }
+
+
+    private void CancelarEdicion()
+    {
+        _producto = new Productos();
+        _productoEditando = null;
+        editando = false;
+    }
+
+    private void MostrarExistencias()
+    {
+        resumenDepartamentos = _listaProductos
+            .GroupBy(p => p.Departamento)
+            .ToDictionary(g => g.Key, g => g.Count());
+    }
+}
+ 
